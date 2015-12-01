@@ -21,6 +21,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 
 import de.tum.in.tumcampus.R;
+import de.tum.in.tumcampus.activities.AlarmActivity;
 import de.tum.in.tumcampus.activities.MainActivity;
 import de.tum.in.tumcampus.auxiliary.Utils;
 import de.tum.in.tumcampus.models.GCMAlert;
@@ -29,12 +30,16 @@ import de.tum.in.tumcampus.models.TUMCabeClient;
 
 public class Alarm extends GenericNotification {
 
+    /**
+     * This is the private key used to sign all messages sent by the alarm system - used to verify that the sent message is correct
+     */
     private static final String pubKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvSukueIrdowjJB/IHR6+tsCbYLF9kmC/2Sa8/kI9Ttq0aUyC0hDt2SBzuDDmp/RwnUap5/0xT/h3z+WgKOjrzWig4lmb7G2+RuuVn8466AErfp3YQVFiovNLGMqwfJzPZ9aV3sZBXCTeEbDkd/CLRp3kBYkAtL8NfIlbNaII9CWKdhS907JyEWRZO2DLiYLm37vK/hwg58eXHwL9jNYY3gFqGUlfWXwGC2a0yTOk9rgJejhUbU9GLWSL3OwiHVXlpPsvTC1Ry0H4kQQeisjCgpkPjOQAnAFRN9zZLtBZlIsssYvL3ohY/C1HfGzDwGTaELjhtzY9qHdFW/4GDZh8swIDAQAB";
+
     public final GCMAlert alert;
     private GCMNotification info;
 
     public Alarm(String payload, Context context, int notification) {
-        super(context, 3, notification, true);
+        super(context, 3, notification, true); //Let the base class know which id this notification has
 
         //Check if a payload was passed
         if (payload == null) {
@@ -140,14 +145,17 @@ public class Alarm extends GenericNotification {
 
         // GCMNotification sound
         Uri sound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.message);
-        Intent alarm = new Intent(this.context, MainActivity.class);
+        Intent alarm = new Intent(this.context, AlarmActivity.class);
+        alarm.putExtra("info", this.info);
+        alarm.putExtra("alert", this.alert);
         PendingIntent pending = PendingIntent.getActivity(this.context, 0, alarm, PendingIntent.FLAG_UPDATE_CURRENT);
+        String strippedDescription = Utils.stripHtml(info.getDescription()); // Strip any html tags from the description
 
         return new NotificationCompat.Builder(context)
                 .setSmallIcon(this.icon)
                 .setContentTitle(info.getTitle())
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(info.getDescription()))
-                .setContentText(info.getDescription())
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(strippedDescription))
+                .setContentText(strippedDescription)
                 .setContentIntent(pending)
                 .setDefaults(Notification.DEFAULT_VIBRATE)
                 .setLights(0xff0000ff, 500, 500)
